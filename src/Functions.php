@@ -134,15 +134,35 @@ if (! function_exists('test')) {
      *
      * @return Expectable|TestCall|TestCase|mixed
      */
-    function test(?string $description = null, ?Closure $closure = null): HigherOrderTapProxy|TestCall
+    function test(string|Closure|null $description = null, ?Closure $closure = null): HigherOrderTapProxy|TestCall
     {
+        $isAnonymous = $description instanceof Closure;
+
+        if ($isAnonymous) {
+            $closure = $description;
+            $reflectionFunction = new ReflectionFunction($closure);
+
+            $relativeFilename = str_replace(
+                search: getcwd().DIRECTORY_SEPARATOR,
+                replace: '',
+                subject: (string) $reflectionFunction->getFileName(),
+            );
+
+            $description = $relativeFilename.':'.$reflectionFunction->getStartLine();
+        }
+
         if ($description === null && TestSuite::getInstance()->test instanceof \PHPUnit\Framework\TestCase) {
             return new HigherOrderTapProxy(TestSuite::getInstance()->test);
         }
 
         $filename = Backtrace::testFile();
+        $testCall = new TestCall(TestSuite::getInstance(), $filename, $description, $closure);
 
-        return new TestCall(TestSuite::getInstance(), $filename, $description, $closure);
+        if ($isAnonymous) {
+            $testCall->group('anonymous');
+        }
+
+        return $testCall;
     }
 }
 
