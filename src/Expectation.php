@@ -1044,6 +1044,29 @@ final class Expectation
     }
 
     /**
+     * Asserts that the given expectation target has a non-public constructor method.
+     */
+    public function toHaveNonPublicConstructor(): ArchExpectation
+    {
+        $callback = function (ObjectDescription $object): bool {
+            $constructor = $object->reflectionClass->getConstructor();
+
+            if ($constructor === null) {
+                return false;
+            }
+
+            return ! $constructor->isPublic();
+        };
+
+        return Targeted::make(
+            $this,
+            $callback,
+            'to have non-public constructor',
+            FileLineFinder::where(fn (string $line): bool => str_contains($line, '__construct')),
+        );
+    }
+
+    /**
      * Asserts that the given expectation target has a constructor method.
      */
     public function toHaveConstructor(): ArchExpectation
